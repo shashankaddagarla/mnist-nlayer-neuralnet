@@ -99,10 +99,10 @@ class NNClassifier:
 		np.savez_compressed(
 			file=os.path.join(os.curdir, 'models', filename),
 			weights=self.weights,
-            biases=self.biases,
-            layers=self.layers,
-            epochs=self.epochs,
-            learning_rate=self.learning_rate
+			biases=self.biases,
+			layers=self.layers,
+			epochs=self.epochs,
+			learning_rate=self.learning_rate
 		)
 
 	def load_model(self, filename='model.npz'):
