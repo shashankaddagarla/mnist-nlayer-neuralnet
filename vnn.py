@@ -1,9 +1,10 @@
 import os
 import random
 import math
-import numpy as np
 
+import numpy as np
 import load_data
+
 
 N_CLASSES = 10
 N_FEATURES = 28*28
@@ -20,25 +21,24 @@ def one_hot(y):
 
 class NNClassifier:
 
-	def __init__(self, n_features, layers=list(), l1 = 0.0, l2 = 0.0,
+	def __init__(self, n_features, layers=list(), l2 = 0.0,
 				epochs = 500, learning_rate = 1e-1):
 
 		np.random.seed(RANDOM_SEED)
 		random.seed(RANDOM_SEED)
 		self.n_features = n_features # number of neurons in input layer
-		self.l1 = l1
 		self.l2 = l2
 		self.layers = layers
 		self.n_layers = len(layers)
 		self.epochs = epochs
 		self.learning_rate = learning_rate
 		self.weights = self._init_weights()
-		self.biases = [np.zeros((x, 1)) for x in self.layers]
+		self.biases = [np.random.randn(x, 1) for x in self.layers]
 		self.activations = [np.zeros((x, 1)) for x in self.layers]
 
 	def _init_weights(self):
 		# in testing, uniform initialization prevented vanishing gradient problem better than standard normal distribution with mean 0 and stddev 1
-		weights = [np.random.uniform(-1.0, 1.0, (x, y)) for x, y in zip(self.layers[1:], self.layers[:-1])]
+		weights = [np.random.randn(x, y)/np.sqrt(y) for x, y in zip(self.layers[1:], self.layers[:-1])]
 		weights.insert(0, np.array([0]))
 		return weights
 
@@ -53,7 +53,7 @@ class NNClassifier:
 		# delta_l represents layer-wise error
 		delta_l = [np.zeros((x, 1)) for x in (self.layers[1:])]
 		delta_l.insert(0, np.array([0]))
-		delta_l[-1] = self.activations[-1] - y
+		delta_l[-1] = self.activations[-1] - y # cross-entropy error delta
 
 		for layer in range(self.n_layers - 2, 0, -1):
 			sigmoid_prime_z = np.multiply(self.activations[layer], 1-self.activations[layer])
@@ -61,7 +61,7 @@ class NNClassifier:
 
 		return delta_l
 
-	def fit(self, training_images, training_labels):
+	def fit(self, training_images, training_labels, test_images, test_labels):
 
 		X = np.split(training_images, training_images.shape[0])
 		y = np.split(training_labels, training_labels.shape[0])
@@ -80,9 +80,18 @@ class NNClassifier:
 				delta_l = self._backward_propagation(x, y)
 
 				for layer in range(self.n_layers - 1, 0, -1):
-					self.weights[layer] -= self.learning_rate * np.matmul(delta_l[layer], self.activations[layer - 1].T)
+					self.weights[layer] -= self.learning_rate * (((self.l2 / len(training_data)) * self.weights[layer]) + (np.matmul(delta_l[layer], self.activations[layer - 1].T)))
 					self.biases[layer] -= self.learning_rate * delta_l[layer]
+
 			print("epoch {} gets {} correct out of {}".format(epoch, self.validation_accuracy(validation_data), len(validation_data)))
+
+		print("training set accuracy: {}%".format(self.validation_accuracy(training_data) / len(training_data)))
+		print("validation set accuracy: {}%".format(self.validation_accuracy(validation_data) / len(validation_data)))
+
+		X_test = np.split(test_images, test_images.shape[0])
+		y_test = np.split(test_labels, test_labels.shape[0])
+		test_data = list(zip(test_images, test_labels))
+		print("test set accuracy: {}%".format(self.validation_accuracy(test_data) / len(test_data)))
 
 	def predict(self, training_example):
 		self._forward_propagation(training_example)
@@ -120,12 +129,11 @@ training_images, training_labels, test_images, test_labels = load_data.read_data
 
 nn = NNClassifier(n_features=N_FEATURES,
                   layers = [N_FEATURES, 30, 10],
-                  l1 = 0.0,
                   l2 = 0.5,
-                  epochs = 300,
+                  epochs = 30,
                   learning_rate = 0.001)
 
-nn.fit(training_images, training_labels)
+nn.fit(training_images, training_labels, test_images, test_labels)
 
 
 
